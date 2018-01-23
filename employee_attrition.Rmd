@@ -1,0 +1,101 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+
+```{r}
+HR_DATA<- read.csv("project.csv")       #loading data
+View(HR_DATA)
+str(HR_DATA)
+
+
+Without_salary<-HR_DATA[-10]            #cleaning data to perfrom correlation test
+without_both<-Without_salary[-9]
+
+View(without_both)
+cor(without_both, method = "pearson")        #correlation matrix
+View(without_both)
+without_both$number_project
+plot(without_both)
+summary(without_both)
+
+ggplot(data = without_both, aes(x=satisfaction_level, y=last_evaluation, color="red")) +geom_point()+geom_smooth(method = lm,color="black")
+ggsave( 'p1.jpeg')
+getwd()
+install.packages("zoom")
+library(zoom)
+library(magrittr)
+without_both%>% filter(satisfaction_level>=0.70 & left=="0")%>% count()   #statistical analysis
+
+library(reshape2)               #Plotting HeatMap
+cormat<-cor(without_both, method = "pearson")
+View(cormat)
+melted_cormat<- melt(cormat)
+library(dplyr)
+ggplot(data=melted_cormat)+aes(x=Var1, y=Var2, fill=value)+geom_tile()  #Plotting HeatMap
+ggsave("Heat_Map.jpeg")
+```
+
+```{r}            
+
+without_both$left         #null and alternate hypothesis testing
+emp_population_satisfactionlevel<- mean(without_both$satisfaction_level)
+left_pop<-subset(without_both,left==1)
+View(emp_population_satisfactionlevel)
+View(left_pop)
+
+Emp_turnover_pop<- mean(left_pop$satisfaction_level)
+print(c('the mean for employee population is:', emp_population_satisfactionlevel))
+print(c('the mean for employee left population is:', Emp_turnover_pop))
+
+library(stats)      #Ttest
+t.test(left_pop$satisfaction_level, mu=emp_population_satisfactionlevel)
+ttesting<-t.test(left_pop$satisfaction_level, mu=emp_population_satisfactionlevel)
+ttesting             #ttesting
+dof<- sum(as.numeric(without_both$left))   #degreesof freedom
+dof
+LeftQuantile<-qt(0.025,dof)    #quantiles 2 compare whether 2 accept or reject hyphothesis
+
+rightquantile<-qt(0.975,dof)
+LeftQuantile
+rightquantile
+
+par(mfrow=c(1,3))
+hist(without_both$satisfaction_level, col="red")
+hist(without_both$last_evaluation,col = "blue")
+hist(without_both$average_montly_hours, col = "green")
+
+ggsave("histogram.jpeg")
+
+vis1<-table(without_both$Salarylevel, without_both$satisfaction_level)
+vis1_dataframe<-as.data.frame(vis1)
+vis1_dataframe
+ggplot(data = vis1_dataframe, aes(x=Var1, y=Freq, fill=Var2)) +geom_bar(stat = 'identity') +coord_flip()
+ggsave("Bargraphs.jpeg")
+
+
+set.seed(7)
+install.packages("mlbench")
+install.packages("caret")
+library(mlbench)
+library(caret)
+library(dplyr)
+Reorder<-without_both %>% select(satisfaction_level,last_evaluation,number_project,average_montly_hours,experience,Work_accident,promotion_last_5years,Salarylevel,left)
+
+View(Reorder)
+?sample
+control<-rfeControl(method = "cv", number = 10,functions = rfFuncs)
+ReorderFactor<-as.factor(Reorder$left)
+results<-rfe(Reorder[,1:8],ReorderFactor, sizes = c(1:8), rfeControl = control)
+
+print(results)
+predictors(results)
+
+plot(results, type=c("g","o"))
+
+ggsave("FeatureSelection.jpeg")
+
+
+```
+
